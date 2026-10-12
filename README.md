@@ -123,6 +123,62 @@ The spec defines:
 
 This gives the AI a precise target for implementation and validation.
 
+## Run the spec-driven development demo
+
+Use the Amazon Affiliate Link Normalization Service to demonstrate how the specification and architecture guidance drive feature generation.
+
+### Prepare the demo
+
+Before the demo, remove the generated implementation and test files so Copilot can create them from scratch:
+
+- `src/Infrastructure/AmazonAffiliateLinkService.cs`
+- `src/Application/Interfaces/IAmazonAffiliateLinkService.cs`
+- `tests/Infrastructure.Tests/AmazonAffiliateLinkServiceTests.cs`
+
+From the repository root in PowerShell, you can remove just those files with:
+
+```powershell
+Remove-Item `
+  src\Infrastructure\AmazonAffiliateLinkService.cs, `
+  src\Application\Interfaces\IAmazonAffiliateLinkService.cs, `
+  tests\Infrastructure.Tests\AmazonAffiliateLinkServiceTests.cs
+```
+
+Keep the feature spec, architecture file, Infrastructure instructions, and project files. In particular, do not remove:
+
+- `src/Infrastructure/AmazonAffiliateLinkService.spec.md`
+- `.ai/architecture.md`
+- `src/Infrastructure/github/infrastructure.instructions.md`
+
+### Generate the feature
+
+1. Open this repository in VS Code and open Copilot Chat.
+2. Paste the following request:
+
+   ```text
+   Generate the full implementation for AmazonAffiliateLinkService based on:
+   Spec:
+   src/Infrastructure/AmazonAffiliateLinkService.spec.md
+
+   Architecture rules:
+   src/Infrastructure/github/infrastructure.instructions.md
+   .ai/architecture.md
+
+   Output:
+   src/Infrastructure/AmazonAffiliateLinkService.cs
+   src/Application/Interfaces/IAmazonAffiliateLinkService.cs
+   tests/Infrastructure.Tests/AmazonAffiliateLinkServiceTests.cs
+   ```
+
+3. Review the generated implementation and tests against the spec and architecture rules.
+4. From the repository root, run the tests:
+
+   ```powershell
+   dotnet test project.sln
+   ```
+
+5. Review the test results and any changes Copilot made before accepting the implementation.
+
 ## Recommended workflow for future features
 
 When adding a new feature to this solution:
