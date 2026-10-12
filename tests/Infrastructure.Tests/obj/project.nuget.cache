@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "fgF6wwOAHbQ=",
+  "dgSpecHash": "u3stz4dDlfw=",
   "success": true,
-  "projectFilePath": "C:\\Users\\mcchu\\Dropbox\\EDMUG\\1-Events\\2026-2027\\2026 10 26 Lightning Talks\\projectEdmugDemo\\tests\\Infrastructure.Tests\\Infrastructure.Tests.csproj",
+  "projectFilePath": "C:\\Users\\mcchu\\Dropbox\\_ai\\Work\\Cloudtrend Code\\ai-spec-driven-development\\tests\\Infrastructure.Tests\\Infrastructure.Tests.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\mcchu\\.nuget\\packages\\coverlet.collector\\6.0.2\\coverlet.collector.6.0.2.nupkg.sha512",
     "C:\\Users\\mcchu\\.nuget\\packages\\microsoft.codecoverage\\17.12.0\\microsoft.codecoverage.17.12.0.nupkg.sha512",

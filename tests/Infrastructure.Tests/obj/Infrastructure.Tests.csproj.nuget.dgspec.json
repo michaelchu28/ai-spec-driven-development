@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\mcchu\\Dropbox\\EDMUG\\1-Events\\2026-2027\\2026 10 26 Lightning Talks\\projectEdmugDemo\\tests\\Infrastructure.Tests\\Infrastructure.Tests.csproj": {}
+    "C:\\Users\\mcchu\\Dropbox\\_ai\\Work\\Cloudtrend Code\\ai-spec-driven-development\\tests\\Infrastructure.Tests\\Infrastructure.Tests.csproj": {}
   },
   "projects": {
-    "C:\\Users\\mcchu\\Dropbox\\EDMUG\\1-Events\\2026-2027\\2026 10 26 Lightning Talks\\projectEdmugDemo\\tests\\Infrastructure.Tests\\Infrastructure.Tests.csproj": {
+    "C:\\Users\\mcchu\\Dropbox\\_ai\\Work\\Cloudtrend Code\\ai-spec-driven-development\\tests\\Infrastructure.Tests\\Infrastructure.Tests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\mcchu\\Dropbox\\EDMUG\\1-Events\\2026-2027\\2026 10 26 Lightning Talks\\projectEdmugDemo\\tests\\Infrastructure.Tests\\Infrastructure.Tests.csproj",
+        "projectUniqueName": "C:\\Users\\mcchu\\Dropbox\\_ai\\Work\\Cloudtrend Code\\ai-spec-driven-development\\tests\\Infrastructure.Tests\\Infrastructure.Tests.csproj",
         "projectName": "Infrastructure.Tests",
-        "projectPath": "C:\\Users\\mcchu\\Dropbox\\EDMUG\\1-Events\\2026-2027\\2026 10 26 Lightning Talks\\projectEdmugDemo\\tests\\Infrastructure.Tests\\Infrastructure.Tests.csproj",
+        "projectPath": "C:\\Users\\mcchu\\Dropbox\\_ai\\Work\\Cloudtrend Code\\ai-spec-driven-development\\tests\\Infrastructure.Tests\\Infrastructure.Tests.csproj",
         "packagesPath": "C:\\Users\\mcchu\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\mcchu\\Dropbox\\EDMUG\\1-Events\\2026-2027\\2026 10 26 Lightning Talks\\projectEdmugDemo\\tests\\Infrastructure.Tests\\obj\\",
+        "outputPath": "C:\\Users\\mcchu\\Dropbox\\_ai\\Work\\Cloudtrend Code\\ai-spec-driven-development\\tests\\Infrastructure.Tests\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
