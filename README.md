@@ -18,14 +18,16 @@ This creates a much more predictable workflow than freeform coding.
 
 ```text
 .
-├── .ai/
-│   └── architecture.md
+├── specs/
+│   ├── architecture.md
+│   ├── features/
+│   │   └── AmazonAffiliateLinkService.spec.md
+│   └── projects/
+│       └── infrastructure/
+│           └── infrastructure.instructions.md
 ├── src/
 │   ├── Application/
 │   └── Infrastructure/
-│       ├── AmazonAffiliateLinkService.spec.md
-│       └── github/
-│           └── infrastructure.instructions.md
 ├── tests/
 │   └── Infrastructure.Tests/
 ├── project.sln
@@ -47,7 +49,7 @@ That structure is designed to help AI assistants behave consistently.
 
 ### 1. Architecture instructions
 
-The file [.ai/architecture.md](.ai/architecture.md) defines the solution boundaries and expectations:
+The file [specs/architecture.md](specs/architecture.md) defines the solution boundaries and expectations:
 
 - layered architecture
 - responsibilities per project
@@ -58,7 +60,7 @@ This acts like a system-level blueprint for the AI.
 
 ### 2. Folder-specific instructions
 
-The Infrastructure project has its own instructions in [src/Infrastructure/github/infrastructure.instructions.md](src/Infrastructure/github/infrastructure.instructions.md). These tell the AI:
+The Infrastructure project has its own instructions in [specs/projects/infrastructure/infrastructure.instructions.md](specs/projects/infrastructure/infrastructure.instructions.md). These tell the AI:
 
 - what belongs in Infrastructure
 - which specs to load
@@ -69,7 +71,7 @@ This prevents the AI from drifting into the wrong layer.
 
 ### 3. Feature specs
 
-The feature behavior is captured in specification files such as [src/Infrastructure/AmazonAffiliateLinkService.spec.md](src/Infrastructure/AmazonAffiliateLinkService.spec.md).
+The feature behavior is captured in specification files such as [specs/features/AmazonAffiliateLinkService.spec.md](specs/features/AmazonAffiliateLinkService.spec.md).
 
 The spec describes:
 
@@ -125,7 +127,7 @@ This gives the AI a precise target for implementation and validation.
 
 ## Run the spec-driven development demo
 
-Use the Amazon Affiliate Link Normalization Service to demonstrate how the specification and architecture guidance drive feature generation.
+Use the Amazon Affiliate Link Normalization Service to demonstrate how the specification and architecture guidance drive feature generation. The specifications and instructions are organized under `specs/`.
 
 ### Prepare the demo
 
@@ -146,9 +148,9 @@ Remove-Item `
 
 Keep the feature spec, architecture file, Infrastructure instructions, and project files. In particular, do not remove:
 
-- `src/Infrastructure/AmazonAffiliateLinkService.spec.md`
-- `.ai/architecture.md`
-- `src/Infrastructure/github/infrastructure.instructions.md`
+- `specs/features/AmazonAffiliateLinkService.spec.md`
+- `specs/architecture.md`
+- `specs/projects/infrastructure/infrastructure.instructions.md`
 
 ### Generate the feature
 
@@ -158,11 +160,11 @@ Keep the feature spec, architecture file, Infrastructure instructions, and proje
    ```text
    Generate the full implementation for AmazonAffiliateLinkService based on:
    Spec:
-   src/Infrastructure/AmazonAffiliateLinkService.spec.md
+   specs/features/AmazonAffiliateLinkService.spec.md
 
    Architecture rules:
-   src/Infrastructure/github/infrastructure.instructions.md
-   .ai/architecture.md
+   specs/projects/infrastructure/infrastructure.instructions.md
+   specs/architecture.md
 
    Output:
    src/Infrastructure/AmazonAffiliateLinkService.cs

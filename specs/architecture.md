@@ -23,7 +23,7 @@ Copilot must respect these boundaries when generating code.
 Copilot should reference the following `.spec.md` files when generating or modifying code related to their features
 
 - Amazon Affiliate Link Normalization Service  
-  `srcInfrastructureAmazonAffiliateLinkService.spec.md`
+  `specs/features/AmazonAffiliateLinkService.spec.md`
 
 Additional `.spec.md` files may be added later. Copilot should treat each `.spec.md` as the authoritative definition of behavior, rules, edge cases, and test scenarios for that feature.
 
@@ -139,4 +139,3 @@ Copilot should never guess silently — it should ask for clarification.
 # 10. Future Expansion
 
 This solution may add more `.spec.md` files. Copilot should treat all `.spec.md` files as authoritative behavior definitions and integrate them into code generation automatically.
-

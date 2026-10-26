@@ -22,7 +22,7 @@ Copilot must ensure that code generated here:
 Copilot must reference the following specification files when generating or modifying Infrastructure code:
 
 - **Amazon Affiliate Link Normalization Service**  
-  `/src/Infrastructure/AmazonAffiliateLinkService.spec.md`
+  `/specs/features/AmazonAffiliateLinkService.spec.md`
 
 Additional Infrastructure specs may be added later. Copilot should treat each `.spec.md` file as authoritative for behavior, rules, examples, and edge cases.
 
@@ -74,5 +74,4 @@ If Copilot is unsure about placement or conventions:
 
 - Prefer Infrastructure for external integrations.
 - Ask for clarification rather than guessing silently.
-
 
