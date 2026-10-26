@@ -1,215 +1,159 @@
+using System.Net;
 using System.Text.RegularExpressions;
 using Application.Interfaces;
 
 namespace Infrastructure;
 
 /// <summary>
-/// Normalizes Amazon product, search, and category URLs into the canonical affiliate-tagged format.
+/// Normalizes Amazon product, search, and category URLs for affiliate linking.
 /// </summary>
 public sealed class AmazonAffiliateLinkService : IAmazonAffiliateLinkService
 {
     private const string ComAffiliateTag = "company00-20";
     private const string CaAffiliateTag = "company-20";
 
-    /// <summary>
-    /// Normalizes an Amazon URL to the canonical affiliate-tagged form when eligible.
-    /// </summary>
-    /// <param name="url">The URL to normalize.</param>
-    /// <returns>A structured affiliate result with the normalized URL and metadata.</returns>
+    private static readonly Regex ProductPathPattern = new(
+        @"(?:^|/)(?:dp|gp/product)/(?<asin>[A-Za-z0-9]{10})(?=/|$)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    /// <inheritdoc />
     public AffiliateLinkResult Normalize(string url)
     {
-        if (string.IsNullOrWhiteSpace(url))
+        ArgumentNullException.ThrowIfNull(url);
+
+        var decodedUrl = WebUtility.HtmlDecode(url);
+        if (string.IsNullOrWhiteSpace(decodedUrl))
         {
-            return CreateResult(false, url, null, "Input URL is empty.");
+            return Ineligible(url, "The URL is empty.");
         }
 
-        var originalUrl = url.Trim();
-        var candidate = originalUrl.Replace("&amp;", "&", StringComparison.OrdinalIgnoreCase);
-
-        if (!TryCreateUri(candidate, out var uri))
+        var candidate = decodedUrl.Trim();
+        if (candidate.StartsWith("//", StringComparison.Ordinal))
         {
-            return CreateResult(false, originalUrl, null, "Input URL is not a valid Amazon URL.");
+            candidate = $"https:{candidate}";
+        }
+        else if (!candidate.Contains("://", StringComparison.Ordinal))
+        {
+            candidate = $"https://{candidate}";
         }
 
-        var host = uri.Host.Trim();
-        if (IsImageUrl(host, uri.AbsolutePath))
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
         {
-            return CreateResult(false, originalUrl, null, "Image/CDN URLs are ignored.");
+            return Ineligible(url, "The URL is invalid.");
         }
 
-        if (!IsAmazonHost(host))
+        var host = uri.IdnHost;
+        if (IsImageHost(host))
         {
-            return CreateResult(false, originalUrl, null, "URL is not an Amazon domain.");
+            return Ineligible(url, "Image and CDN URLs are not affiliate-eligible.");
         }
 
-        if (IsHomepage(uri))
+        if (uri.Scheme is not ("http" or "https"))
         {
-            return CreateResult(false, originalUrl, null, "Homepage URLs are not affiliate eligible.");
+            return Ineligible(url, "Only HTTP and HTTPS URLs are supported.");
         }
 
-        var domain = GetDomain(host);
-        var affiliateTag = domain == "com" ? ComAffiliateTag : CaAffiliateTag;
-
-        if (TryGetQueryValue(uri.Query, "k", out var searchTerm) && !string.IsNullOrWhiteSpace(searchTerm))
+        if (!TryGetAmazonMarketplace(host, out var marketplace, out var affiliateTag))
         {
-            var normalizedUrl = $"https://www.amazon.{domain}/s?k={Uri.EscapeDataString(searchTerm)}&tag={affiliateTag}";
-            return CreateResult(true, normalizedUrl, null, "Search URL normalized.");
+            return Ineligible(url, "The URL is not for a supported Amazon marketplace.");
         }
 
-        if (TryGetQueryValue(uri.Query, "node", out var nodeId) && !string.IsNullOrWhiteSpace(nodeId))
+        if (uri.AbsolutePath is "" or "/")
         {
-            var normalizedUrl = $"https://www.amazon.{domain}/b?node={Uri.EscapeDataString(nodeId)}&tag={affiliateTag}";
-            return CreateResult(true, normalizedUrl, null, "Category URL normalized.");
+            return Ineligible(url, "Amazon homepages are not affiliate-eligible.");
         }
 
-        var asin = ExtractAsin(uri);
-        if (!string.IsNullOrWhiteSpace(asin))
+        var asinMatch = ProductPathPattern.Match(uri.AbsolutePath);
+        if (asinMatch.Success)
         {
-            var normalizedUrl = $"https://www.amazon.{domain}/dp/{asin.Trim()}?tag={affiliateTag}";
-            return CreateResult(true, normalizedUrl, asin.Trim(), "Product URL normalized.");
+            var asin = asinMatch.Groups["asin"].Value.ToUpperInvariant();
+            return Eligible(
+                $"https://www.{marketplace}/dp/{asin}?tag={affiliateTag}",
+                asin,
+                "Product URL normalized.");
         }
 
-        return CreateResult(false, originalUrl, null, "URL does not contain affiliate-eligible product, search, or category context.");
+        var queryAsin = GetFirstNonEmptyQueryValue(uri, "ASIN");
+        if (IsValidAsin(queryAsin))
+        {
+            var asin = queryAsin!.ToUpperInvariant();
+            return Eligible(
+                $"https://www.{marketplace}/dp/{asin}?tag={affiliateTag}",
+                asin,
+                "Product URL normalized from its ASIN query parameter.");
+        }
+
+        if (string.Equals(uri.AbsolutePath, "/s", StringComparison.OrdinalIgnoreCase))
+        {
+            var searchQuery = GetFirstNonEmptyQueryValue(uri, "k");
+            if (searchQuery is not null)
+            {
+                return Eligible(
+                    $"https://www.{marketplace}/s?k={Uri.EscapeDataString(searchQuery)}&tag={affiliateTag}",
+                    null,
+                    "Search URL normalized.");
+            }
+        }
+
+        if (string.Equals(uri.AbsolutePath, "/b", StringComparison.OrdinalIgnoreCase))
+        {
+            var node = GetFirstNonEmptyQueryValue(uri, "node");
+            if (node is not null)
+            {
+                return Eligible(
+                    $"https://www.{marketplace}/b?node={Uri.EscapeDataString(node)}&tag={affiliateTag}",
+                    null,
+                    "Category URL normalized.");
+            }
+        }
+
+        return Ineligible(url, "The URL does not contain an eligible product, search, or category page.");
     }
 
-    private static AffiliateLinkResult CreateResult(bool isEligible, string? normalizedUrl, string? asin, string? reason)
+    private static AffiliateLinkResult Eligible(string normalizedUrl, string? asin, string reason)
     {
         return new AffiliateLinkResult
         {
-            IsAffiliateEligible = isEligible,
+            IsAffiliateEligible = true,
             NormalizedUrl = normalizedUrl,
             Asin = asin,
-            Reason = reason,
+            Reason = reason
         };
     }
 
-    private static bool IsImageUrl(string host, string path)
+    private static AffiliateLinkResult Ineligible(string originalUrl, string reason)
     {
-        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(path))
+        return new AffiliateLinkResult
         {
-            return false;
-        }
-
-        return host.EndsWith("images-amazon.com", StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith("media-amazon.com", StringComparison.OrdinalIgnoreCase)
-            || path.Contains("/images/", StringComparison.OrdinalIgnoreCase);
+            IsAffiliateEligible = false,
+            NormalizedUrl = originalUrl,
+            Reason = reason
+        };
     }
 
-    private static bool IsAmazonHost(string host)
+    private static string? GetFirstNonEmptyQueryValue(Uri uri, string key)
     {
-        if (string.IsNullOrWhiteSpace(host))
+        var query = uri.Query;
+        if (query.Length <= 1)
         {
-            return false;
+            return null;
         }
 
-        host = host.TrimEnd('.');
-        return host.Equals("amazon.com", StringComparison.OrdinalIgnoreCase)
-            || host.Equals("www.amazon.com", StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith(".amazon.com", StringComparison.OrdinalIgnoreCase)
-            || host.Equals("amazon.ca", StringComparison.OrdinalIgnoreCase)
-            || host.Equals("www.amazon.ca", StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith(".amazon.ca", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string GetDomain(string host)
-    {
-        if (host.EndsWith("amazon.com", StringComparison.OrdinalIgnoreCase))
+        foreach (var pair in query[1..].Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
-            return "com";
-        }
-
-        if (host.EndsWith("amazon.ca", StringComparison.OrdinalIgnoreCase))
-        {
-            return "ca";
-        }
-
-        throw new InvalidOperationException($"Unsupported Amazon domain: {host}");
-    }
-
-    private static bool IsHomepage(Uri uri)
-    {
-        var path = uri.AbsolutePath;
-        return string.IsNullOrEmpty(path) || path == "/";
-    }
-
-    private static bool TryCreateUri(string candidate, out Uri uri)
-    {
-        uri = null!;
-
-        var normalizedCandidate = candidate.Trim();
-        if (string.IsNullOrWhiteSpace(normalizedCandidate))
-        {
-            return false;
-        }
-
-        if (!normalizedCandidate.Contains("://", StringComparison.Ordinal))
-        {
-            normalizedCandidate = $"https://{normalizedCandidate.TrimStart('/')}";
-        }
-
-        if (!Uri.TryCreate(normalizedCandidate, UriKind.Absolute, out var createdUri))
-        {
-            return false;
-        }
-
-        uri = createdUri;
-        return true;
-    }
-
-    private static bool TryGetQueryValue(string queryString, string key, out string value)
-    {
-        value = string.Empty;
-        if (string.IsNullOrWhiteSpace(queryString))
-        {
-            return false;
-        }
-
-        var pairs = queryString.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries);
-        foreach (var pair in pairs)
-        {
-            var index = pair.IndexOf('=');
-            var parameterName = index >= 0 ? pair[..index] : pair;
-            if (!string.Equals(parameterName, key, StringComparison.OrdinalIgnoreCase))
+            var separatorIndex = pair.IndexOf('=');
+            var encodedKey = separatorIndex >= 0 ? pair[..separatorIndex] : pair;
+            if (!string.Equals(WebUtility.UrlDecode(encodedKey), key, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            value = index >= 0 ? pair[(index + 1)..] : string.Empty;
-            value = Uri.UnescapeDataString(value.Replace('+', ' '));
-            return true;
-        }
-
-        return false;
-    }
-
-    private static string? ExtractAsin(Uri uri)
-    {
-        var pathSegments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        for (var index = 0; index < pathSegments.Length - 1; index++)
-        {
-            if (pathSegments[index].Equals("dp", StringComparison.OrdinalIgnoreCase) && IsValidAsin(pathSegments[index + 1]))
+            var encodedValue = separatorIndex >= 0 ? pair[(separatorIndex + 1)..] : string.Empty;
+            var value = WebUtility.UrlDecode(encodedValue);
+            if (!string.IsNullOrWhiteSpace(value))
             {
-                return pathSegments[index + 1].ToUpperInvariant();
+                return value;
             }
-
-            if (pathSegments[index].Equals("gp", StringComparison.OrdinalIgnoreCase)
-                && index + 2 < pathSegments.Length
-                && pathSegments[index + 1].Equals("product", StringComparison.OrdinalIgnoreCase)
-                && IsValidAsin(pathSegments[index + 2]))
-            {
-                return pathSegments[index + 2].ToUpperInvariant();
-            }
-        }
-
-        var pathMatch = Regex.Match(uri.AbsolutePath, @"(?:/dp/|/gp/product/)([A-Z0-9]{10})(?:/|$)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        if (pathMatch.Success)
-        {
-            return pathMatch.Groups[1].Value.ToUpperInvariant();
-        }
-
-        if (TryGetQueryValue(uri.Query, "ASIN", out var queryAsin) && IsValidAsin(queryAsin))
-        {
-            return queryAsin.ToUpperInvariant();
         }
 
         return null;
@@ -217,8 +161,35 @@ public sealed class AmazonAffiliateLinkService : IAmazonAffiliateLinkService
 
     private static bool IsValidAsin(string? value)
     {
-        return !string.IsNullOrWhiteSpace(value)
-            && value.Length == 10
-            && Regex.IsMatch(value, "^[A-Z0-9]{10}$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        return value is { Length: 10 } && value.All(char.IsAsciiLetterOrDigit);
+    }
+
+    private static bool IsImageHost(string host)
+    {
+        return string.Equals(host, "g-ec2.images-amazon.com", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(host, "m.media-amazon.com", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryGetAmazonMarketplace(string host, out string marketplace, out string affiliateTag)
+    {
+        if (string.Equals(host, "amazon.com", StringComparison.OrdinalIgnoreCase)
+            || host.EndsWith(".amazon.com", StringComparison.OrdinalIgnoreCase))
+        {
+            marketplace = "amazon.com";
+            affiliateTag = ComAffiliateTag;
+            return true;
+        }
+
+        if (string.Equals(host, "amazon.ca", StringComparison.OrdinalIgnoreCase)
+            || host.EndsWith(".amazon.ca", StringComparison.OrdinalIgnoreCase))
+        {
+            marketplace = "amazon.ca";
+            affiliateTag = CaAffiliateTag;
+            return true;
+        }
+
+        marketplace = string.Empty;
+        affiliateTag = string.Empty;
+        return false;
     }
 }
